@@ -1,0 +1,12 @@
+{
+  "name": "dev-db",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "scripts": {
+    "dev": "docker-compose up"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

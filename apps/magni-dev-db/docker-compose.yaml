@@ -1,0 +1,14 @@
+version: '3.3'
+services:
+    magni-dev-db:
+        ports:
+            - '27017:27017'
+        container_name: mongodb
+        logging:
+            driver: none
+        restart: always
+        environment:
+            - MONGO_INITDB_ROOT_USERNAME=mongoadmin
+            - MONGO_INITDB_ROOT_PASSWORD=bdung
+            - SE_OPTS=-log /tmp/log.txt
+        image: mongo
