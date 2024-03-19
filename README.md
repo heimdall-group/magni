@@ -79,3 +79,24 @@ Learn more about the power of Turborepo:
 - [Filtering](https://turbo.build/repo/docs/core-concepts/monorepos/filtering)
 - [Configuration Options](https://turbo.build/repo/docs/reference/configuration)
 - [CLI Usage](https://turbo.build/repo/docs/reference/command-line-reference)
+
+### Packages
+
+# Irpa
+- Navigation between block editors
+- Drag and drop blocks
+- Select multiple blocks
+- Copy paste blocks
+- Manage content when amount of block editors change
+
+# Irpa-editor
+- Inline contenteditable editor
+- Inline contenteditable code editor
+
+### TODO
+- Change Ipra-editor to not use fontawesome & vuetify. Use props to pass tags or slots
+- Move types into Irpa-types
+- Move global functions (getCaretPos, blockMarkdownToHTML, blockHTMLToMarkdown) into Irpa-utils
+  - getCaretPos
+  - blockMarkdwonToHTML
+  - blockHTMLToMarkdown

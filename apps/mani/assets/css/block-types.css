@@ -1,0 +1,99 @@
+.block-page > .block-page-title h1 {
+  /* Page title */
+  font-size: 40px;
+}
+
+.block-type-heading-1 h2,
+.block-type-heading-1 {
+  /* Heading 1 */
+  font-size: 30px;
+}
+.block-type-heading-2 h3,
+.block-type-heading-2 {
+  /* Heading 2 */
+  font-size: 24px;
+}
+.block-type-heading-3 h4,
+.block-type-heading-3 {
+  /* Heading 3 */
+  font-size: 20px;
+}
+
+.block-type-page {
+  font-size: 1rem;
+}
+
+.block-type-page.navigation-block .block-content {
+  /* Page navigation */
+  display: flex;
+  align-items: center;
+}
+
+.block-type-page.navigation-block .block-content a {
+  /* Page navigation link */
+  text-decoration: none;
+  margin: 0 0 0 8px;
+  user-select: none;
+}
+
+.block-type-page.navigation-block .block-content a span {
+  /* Page navigation link */
+  text-decoration: underline;
+  margin: 0 0 0 8px;
+  user-select: none;
+}
+
+.block-type-paragraph {
+  font-size: 1rem;
+
+}
+.block-type-to-do {
+  font-size: 1rem;
+
+}
+.block-type-bulleted-list {
+
+}
+.block-type-toggle-list {
+
+}
+.block-type-table {
+
+}
+.block-type-code {
+
+}
+.block-type-quote {
+
+}
+
+.block-type-toggle-heading-1 {
+  
+}
+.block-type-toggle-heading-2 {
+
+}
+.block-type-toggle-heading-3 {
+
+}
+.block-type-toggle-heading-4 {
+
+}
+.block-type-toggle-heading-5 {
+
+}
+
+.block-type-columns-2 {
+
+}
+.block-type-columns-3 {
+
+}
+.block-type-columns-4 {
+
+}
+.block-type-columns-5 {
+
+}
+
+
