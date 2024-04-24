@@ -94,9 +94,7 @@ Learn more about the power of Turborepo:
 - Inline contenteditable code editor
 
 ### TODO
-- Change Ipra-editor to not use fontawesome & vuetify. Use props to pass tags or slots
-- Move types into Irpa-types
-- Move global functions (getCaretPos, blockMarkdownToHTML, blockHTMLToMarkdown) into Irpa-utils
-  - getCaretPos
-  - blockMarkdwonToHTML
-  - blockHTMLToMarkdown
+- Mani: Fix nuxt plugin and replace test plugin that uses IrpaVuePlugin
+- Irpa: Multiblock navigation
+- Irpa: Undo manager for block inserts
+- Selections sometimes contains to many elements (Get all content?)

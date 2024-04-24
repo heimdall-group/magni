@@ -1,8 +1,9 @@
 import { createApp } from 'vue'
-import App from './app.vue';
-import plugin from './index'
+import App from './App.vue';
+import { createIrpa } from './plugins/index'
 
 const app = createApp(App)
-app.use(plugin)
+const irpa = createIrpa();
+app.use(irpa)
 
 app.mount('#app')

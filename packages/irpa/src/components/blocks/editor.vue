@@ -11,12 +11,17 @@ import {
   blockGetPrevBlock,
   blockInsertBlocks,
   blockNestBlocks,
-  blockRemoveBlocks,
+  blockGetEditor,
+  blockRemoveBlock,
+  blockGetEndPos,
+  blockGetCurrentPos,
   blockResolvePath,
   blockSetCaretPos,
   textBlocks,
-} from '../../utils/useBlock';
-import { Block, BlockCopy } from '../../types/blocks';
+} from 'irpa-utils';
+import { IrpaUndoManager } from 'irpa-undo-manager';
+import { Block, BlockCopy, BlockSelection, BlockEditorUndoManager } from 'irpa-types';
+import { nextTick } from 'vue';
 
   const props = defineProps({
     page: {
@@ -28,54 +33,46 @@ import { Block, BlockCopy } from '../../types/blocks';
   const emits = defineEmits(['update:modelValue'])
   const readOnly = ref(false);
   const dragging = ref(false);
+  const undoManager = new IrpaUndoManager();
   const resolvedPaths = ref<{[key: string]: string[]}>({});
 
-  const handleBlockRemove = (block: Block, ref: VueElement,) => {
-    // Remove current block. Take content and pass to blocks -1
-    // If its the last block just do nothing
+  const handleUndoManager = (action: BlockEditorUndoManager) => {
+    switch(action.type) {
+      case 'insert': {
+        const { blocks, focus } = action;
+      } break;
+      case 'remove': {
 
-    
-    const prevBlockDom = blockGetPrevBlock(block, resolvedPaths.value, props.page);
-    const id = prevBlockDom?.getAttribute('id')?.replace('block-', '');
-    if (id && prevBlockDom) {
-      const prevBlock = blockResolvePath(resolvedPaths.value[id], props.page);
-      prevBlock.properties.content += block.properties.content;
-
-      // setTimeout(() => {
-      //   blockSetCaretPos(prevBlockDom, 'end');
-      //   const parent = blockResolvePath(resolvedPaths.value[block.parents[props.page.id]], props.page);
-      //   const index = parent.content.indexOf(block);
-      //   blockRemoveBlocks(block, parent, index);
-      // }, 0)
+      } break;
     }
   }
 
-
-  /**
-   * TODO
-   * Blocks without editor needs to be able to insert text after cursor
-   * Selections sometimes contains to many elements (Get all content?)
-   */
-
-  
-
-
-
+  const handleBlockRemove = (block: Block) => {
+    const blockDom = document.querySelector(`#block-${block.id}`);
+    const prevBlockDom = blockGetPrevBlock(block, resolvedPaths.value, props.page);
+    const id = prevBlockDom?.getAttribute('id')?.replace('block-', '');
+    if (id && prevBlockDom && blockDom) {
+      const prevBlock = blockResolvePath(resolvedPaths.value[id], props.page);
+      const parent = blockResolvePath(resolvedPaths.value[prevBlock.parents[props.page.id]], props.page);
+      const { container } = blockGetEditor(blockDom);
+      const pos = prevBlockDom.innerText.length;
+      prevBlock.properties.content += container.innerText;
+      blockRemoveBlock(parent, block);
+      blockSetCaretPos(prevBlockDom, pos);
+    }
+  }
 
   const handleBlockInsert = (type: Block["type"], block: Block, ref: VueElement) => {
-    let pos = 0;
     let properties: Block["properties"] = {
       content: '',
     };
     if (textBlocks.includes(block.type)) {
-      const caretPos = blockGetCaretPos(ref, true);
-      pos = caretPos.pos;
+      const pos = blockGetCaretPos(ref, 'html');
       const { content } = block.properties;
       properties.content = content.slice(pos);
       block.properties.content = content.slice(0, pos);
     } else {
-      const caretPos = blockGetCaretPos(ref, false);
-      pos = caretPos.pos;
+      const pos = blockGetCaretPos(ref);
       const { content } = block.properties;
       properties.content = content.slice(pos);
       block.properties.content = content.slice(0, pos);
@@ -87,14 +84,12 @@ import { Block, BlockCopy } from '../../types/blocks';
     const parent = blockResolvePath(resolvedPaths.value[block.parents[props.page.id]], props.page);
     const index = parent.content.indexOf(block);
     blockInsertBlocks(newBlock, parent, index + 1);
-    setTimeout(() => {
+    nextTick(() => {
       const domBlock = document.querySelector(`#block-${newBlock.id}`);
       if (domBlock) {
-        blockSetCaretPos(domBlock as VueElement, 'start');
-      } else {
-        console.log('no block 🤓')
+        blockSetCaretPos(domBlock, 0);
       }
-    }, 0)
+    })
   }
 
   // look in current block. Unless more editors exist go to next block, next block could be child block
@@ -110,7 +105,9 @@ import { Block, BlockCopy } from '../../types/blocks';
     const newBlock = blockGetPrevBlock(block, resolvedPaths.value, props.page);
     const currentBlock = document.querySelector(`#block-${block.id}`);
     if (newBlock && currentBlock) {
-      blockSetCaretPos(newBlock, key === 'ArrowLeft' ? 'end' : 'current', currentBlock)
+      const { container } = blockGetEditor(newBlock)
+      const pos = blockGetCaretPos(currentBlock)
+      blockSetCaretPos(newBlock, key === 'ArrowLeft' ? container.innerText.length : pos)
     }
   }
 
@@ -118,7 +115,7 @@ import { Block, BlockCopy } from '../../types/blocks';
     const newBlock = blockGetNextBlock(block, resolvedPaths.value, props.page);
     const currentBlock = document.querySelector(`#block-${block.id}`);
     if (newBlock && currentBlock) {
-      blockSetCaretPos(newBlock, key === 'ArrowRight' ? 'start' : 'current', currentBlock)
+      blockSetCaretPos(newBlock, key === 'ArrowRight' ? 0 : blockGetCaretPos(currentBlock))
     }
   }
 
@@ -128,6 +125,7 @@ import { Block, BlockCopy } from '../../types/blocks';
   }
 
   const handleEditorCopy = (event: ClipboardEvent) => {
+    const targets: Block[] = [];
     if (selections.value.size > 0) {
       const blocks: Block[] = [];
       selections.value.forEach((id) => {
@@ -135,32 +133,43 @@ import { Block, BlockCopy } from '../../types/blocks';
         blocks.push(block);
       })
 
-      const blockOneRect = document.querySelector(`#block-${blocks[0].id}`)?.getBoundingClientRect();
-      const blockTwoRect = document.querySelector(`#block-${blocks[blocks.length - 1].id}`)?.getBoundingClientRect();
-      if (!blockOneRect || !blockTwoRect) {
+      const firstBlockRect = document.querySelector(`#block-${blocks[0].id}`)?.getBoundingClientRect();
+      const lastBlockRect = document.querySelector(`#block-${blocks[blocks.length - 1].id}`)?.getBoundingClientRect();
+      if (!firstBlockRect || !lastBlockRect) {
         return;
       }
 
-      if (blockOneRect.top > blockTwoRect.top) {
+      if (firstBlockRect.top > lastBlockRect.top) {
         blocks.reverse();
       }
-
-      let data = '';
-      blocks.forEach((block) => {
-        data += blockExportAsMarkdown(block) + '\n';
-      })
-
-      event.clipboardData?.setData('magni-blocks', JSON.stringify({
-        comparison: data,
-        blocks: blockNestBlocks(blocks, resolvedPaths.value, props.page.id)
-      }));
-      event.clipboardData?.setData('text/plain', data);
-      event.preventDefault();
+      targets.push(...blocks);
+    } else if (window.getSelection()?.toString().length === 0) {
+      const block = document.activeElement?.closest('.block');
+      const id = block?.getAttribute('id')?.replace('block-', '');
+      if (id) {
+        const block = blockResolvePath(resolvedPaths.value[id], props.page);
+        targets.push(block);
+      }
     }
+
+    if (targets.length === 0) {
+      return;
+    }
+    let data = '';
+    targets.forEach((block) => {
+      data += blockExportAsMarkdown(block) + '\n';
+    })
+
+    event.clipboardData?.setData('irpa-blocks', JSON.stringify({
+      comparison: data,
+      blocks: blockNestBlocks(targets, resolvedPaths.value, props.page.id)
+    }));
+    event.clipboardData?.setData('text/plain', data);
+    event.preventDefault();
   }
 
   const handleEditorPaste = (event: ClipboardEvent) => {
-    const blocks = event.clipboardData?.getData('magni-blocks');
+    const blocks = event.clipboardData?.getData('irpa-blocks');
     const text = event.clipboardData?.getData('text/plain');
     const blockDom = (event.target as HTMLElement).classList.contains('.block') ? (event.target as HTMLElement) : (event.target as HTMLElement).closest('.block');
     const id = blockDom?.getAttribute('id')?.replace('block-', '');
@@ -189,7 +198,7 @@ import { Block, BlockCopy } from '../../types/blocks';
       });
 
       const parent = blockResolvePath(resolvedPaths.value[block.parents[props.page.id]], props.page);
-      const index = parent.content.indexOf(block);
+      const index = parent.content.findIndex((block) => block.id === id);
       blockInsertBlocks(blockNestBlocks(blocks, resolvedPaths.value, props.page.id), parent, index)
     } else {
       event.clipboardData?.clearData('magni-blocks');
@@ -197,20 +206,7 @@ import { Block, BlockCopy } from '../../types/blocks';
   }
 
   const selections = ref<Set<unknown>>(new Set());
-  const selector = ref<{
-    active: boolean,
-    hasMoved: boolean,
-    start: {
-      top: number,
-      left: number,
-    },
-    top: number | boolean,
-    right: number | boolean,
-    bottom: number | boolean,
-    left: number | boolean,
-    height: number,
-    width: number,
-  }>({
+  const selector = ref<BlockSelection>({
     active: false,
     hasMoved: false,
     start: {
@@ -364,21 +360,23 @@ import { Block, BlockCopy } from '../../types/blocks';
       }
     })
     rects.sort((a, b) => a.difference - b.difference);
-    const domBlock = document.elementFromPoint(rects[0].left, rects[0].top);
+    const domBlock = document.elementFromPoint(rects[0].left, rects[0].top)?.closest('.block');
     if (!domBlock) {
       return;
     }
 
     if (rects[0].type === 'title') {
-      blockSetCaretPos(domBlock as VueElement, 'end')
+      blockSetCaretPos(domBlock, blockGetEndPos(domBlock))
     } else {
       const block = blockResolvePath(resolvedPaths.value[domBlock.getAttribute('id')?.replace('block-', '') || ''], props.page);
       if (block.content.length > 0) {
         const lastBlock = block.content[block.content.length - 1];
         const content = document.querySelector(`#block-${lastBlock.id}`);
-        blockSetCaretPos(content as VueElement, 'end')
+        if (content) {
+          blockSetCaretPos(content, blockGetEndPos(content))
+        }
       } else {
-        blockSetCaretPos(domBlock as VueElement, 'end')
+        blockSetCaretPos(domBlock, blockGetEndPos(domBlock))
       }
     }
   }
@@ -487,22 +485,12 @@ import { Block, BlockCopy } from '../../types/blocks';
   onMounted(() => {
     document.addEventListener('mouseup', handleEditorMouseUp)
     document.addEventListener('copy', handleEditorCopy)
-  })
+  });
 </script>
 
 <template>
-  <div>
-    <div>
-      <button
-        @click="readOnly = !readOnly"
-      >
-        Readonly: {{ readOnly }}
-      </button>
-    </div>
-  </div>
-  {{ selections.size }}
   <div
-    class="block-page"
+    class="block-page block-page-editor"
     :class="{
       'block-page--readOnly': readOnly,
       'block-page--dragging': dragging,
@@ -513,7 +501,6 @@ import { Block, BlockCopy } from '../../types/blocks';
     @mousedown="handleEditorMouseDown"
     @mousemove="handleEditorMouseMove"
     @scroll="handleEditorScroll"
-
     @paste="handleEditorPaste"
   >
     <blocks-selection
@@ -531,6 +518,7 @@ import { Block, BlockCopy } from '../../types/blocks';
       :readonly="readOnly"
       :parent="page.id"
       :path="[]"
+      :undo-manager="undoManager"
       class="block-page-title"
       @click="handleBlockClick"
       @drag:active="(value: boolean) => dragging = value"
@@ -544,7 +532,3 @@ import { Block, BlockCopy } from '../../types/blocks';
     />
   </div>
 </template>
-
-<style>
-  @import url('../../assets/blocks.css');
-</style>

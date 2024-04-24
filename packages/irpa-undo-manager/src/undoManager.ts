@@ -26,6 +26,11 @@ export class IrpaUndoManager {
     }
   }
 
+  setDebug(debug: boolean) {
+    this.debug = debug;
+    this.#logger('info', `Debug mode ${debug ? 'enabled' : 'disabled'}`);
+  }
+
   getActions() {
     return this.actions;
   }
@@ -58,23 +63,51 @@ export class IrpaUndoManager {
     }
   }
 
-  log(name: string, payload: any) {
+  log(name: string, payload: any, performOnLog: boolean = true) {
     this.count++;
     this.undos.push({name, payload, count: this.count});
-    return this.actions[name].perform(payload);
+    if (performOnLog) {
+      return this.actions[name].perform(payload);
+    }
+  }
+
+  addToLog(name: string, paylod: any, performOnLog: boolean = true, overwrite: boolean = false) {
+    if (this.undos.length === 0) {
+      this.log(name, paylod, performOnLog);
+    } else {
+      const last = this.undos.reverse().find(action => action.name === name);
+      this.undos.reverse();
+      if (last && overwrite) {
+        last.payload = paylod;
+      } else if (last) {
+        switch (typeof last.payload) {
+          case 'number':
+            last.payload += paylod;
+            break;
+          case 'string':
+            last.payload += paylod;
+            break;
+          case 'object':
+            last.payload = {...last.payload, ...paylod};
+            break;
+        }
+      } else {
+        this.#logger('error', `No previous action found for: ${name}`)
+      }
+    }
   }
 
   redo() {
     const action = this.redos.pop();
     if (action) {
       if (this.actions[action.name] === undefined) {
-        console.error(`[Irpa-Undo-Manager]: Action not found: ${action.name}`);
+        this.#logger('error', `Action not found: ${action.name}`);
         return false;
       }
       this.undos.push(action);
       return this.actions[action.name].perform(action.payload);
     } else {
-      console.error(`[Irpa-Undo-Manager]: No more actions to redo`);
+      this.#logger('error', 'No more actions to redo');
       return false
     }
   }
@@ -83,13 +116,13 @@ export class IrpaUndoManager {
     const action = this.undos.pop();
     if (action) {
       if (this.actions[action.name] === undefined) {
-        console.error(`[Irpa-Undo-Manager]: Action not found: ${action.name}`);
+        this.#logger('error', `Action not found: ${action.name}`);
         return false;
       }
       this.redos.push(action);
       return this.actions[action.name].revert(action.payload);
     } else {
-      console.error(`[Irpa-Undo-Manager]: No more actions to undo`);
+      this.#logger('error', 'No more actions to undo');
       return false
     }
   }

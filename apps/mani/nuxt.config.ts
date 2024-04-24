@@ -1,28 +1,20 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
 import { transformAssetUrls } from 'vite-plugin-vuetify';
-import topLevelAwait from "vite-plugin-top-level-await";
 
 export default defineNuxtConfig({
   build: {
     transpile: ['vuetify'],
-  },
-  components: {
-    dirs: [
-      {
-        path: '~/components/blocks/types',
-        prefix: 'blocks-types',
-        global: true,
-      },
-      '~/components',
-    ]
   },
   css: [
     'vuetify/lib/styles/main.sass',
     '@fortawesome/fontawesome-svg-core/styles.css',
   ],
   devtools: { enabled: true },
-  modules: [],
+  modules: [
+    // Uncomment when nuxt plugin is fixed
+    // 'irpa/plugins/nuxt',
+  ],
   nitro: {},
   runtimeConfig: {
     public: {

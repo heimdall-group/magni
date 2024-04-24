@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import type { PropType, VueElement } from 'vue';
+  import type { PropType } from 'vue';
   import { VueDraggable } from 'vue-draggable-plus'
-  import { ref, onMounted } from 'vue';
+  import { ref, onMounted, nextTick } from 'vue';
   import {
     blockAtFirstChar,
     blockAtFirstLine,
@@ -9,9 +9,10 @@
     blockAtLastLine,
     blockHandleKeyUp,
     contentBlocks,
-    highlightedBlock,
-  } from '../../utils/useBlock';
-  import type { Block, BlockMenu } from '../../types/blocks';
+    blockIsTextHighlighted,
+blockGetEditor,
+  } from 'irpa-utils';
+  import type { Block, BlockMenu } from 'irpa-types';
 
   const props = defineProps({
     'block': {
@@ -38,6 +39,10 @@
       type: Array,
       required: true,
     },
+    'undoManager': {
+      type: Object,
+      required: true,
+    }
   });
 
   const emits = defineEmits([
@@ -54,13 +59,13 @@
     emits('block:resolve', props.block, [...props.path, props.block.id])
   })
 
-  const content = ref<InstanceType<typeof VueElement> | null>(null);
+  const content = ref<HTMLElement | undefined>();
   const menus = ref<BlockMenu>({
     searchbar: false,
     navigation: false,
   });
 
-  const keyDownHandler = (event:KeyboardEvent, ref?: InstanceType<typeof VueElement>) => {
+  const keyDownHandler = (event:KeyboardEvent, ref?: HTMLElement) => {
     const block = ref ? ref : content.value;
     if (!block) {
       return;
@@ -79,7 +84,7 @@
         break;
       case 'Backspace':
         // If text hasnt been highlighted and pointer position is at start we remove the current block. If text remains it will be merged into "above" block
-        if (!highlightedBlock() && blockAtFirstChar(block)) {
+        if (!blockIsTextHighlighted() && blockAtFirstChar(block)) {
           event.preventDefault();
           event.stopPropagation();
           emits('block:remove', props.block, block)
@@ -142,12 +147,20 @@
     }
   }
 
-  const searchHandler = (type: Block["type"], search: string) => {
+  const updateMenu = (type: Block["type"], search: string) => {
+    console.log('updateMenu')
     props.block.properties.content = props.block.properties.content.replace(`/${search}`, '');
     if (props.block.properties.content.length !== 0) {
       emits('block:insert', props.block, type)
     } else {
       props.block.type = type;
+      nextTick(() => {
+        const block = content.value;
+        if (block) {
+          const { container } = blockGetEditor(block);
+          container.focus();
+        }
+      })
     }
   }
 </script>
@@ -165,12 +178,12 @@
   >
     <div class="block-container">
       <div class="block-controls">
-        <v-btn class="block-handle">
+        <component class="block-handle" :is="$irpa.tags.blockButtonHandle">
           <font-awesome-icon icon="fa-solid fa-grip-vertical" />
-        </v-btn>
+        </component>{{ menus.searchbar }}
       </div>
       <div class="block-content" @mousedown.stop="handleMouseDown">
-        {{ block.properties.content }}
+        <blocks-menu v-model="menus.searchbar" :block="block" @update:block="updateMenu"/>
         <component
           @keydown="keyDownHandler"
           @keyup="(event: KeyboardEvent) => blockHandleKeyUp(event, block, menus)"
@@ -179,6 +192,7 @@
           :data-type="block.type"
           :child="child"
           :block="block"
+          :undo-manager="undoManager"
           ref="content"
         />
       </div>
@@ -204,6 +218,7 @@
         :readonly="readonly"
         :parent="block.id"
         :path="[...path, block.id]"
+        :undo-manager="undoManager"
         child
         @block:resolve="(...args: any[]) => $emit('block:resolve', ...args)"
         @drag:active="(value: boolean) => $emit('drag:active', value)"

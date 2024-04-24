@@ -14,6 +14,10 @@ import { PropType } from 'vue';
       type: String,
       required: false
     },
+    undoManager: {
+      type: Object,
+      required: true,
+    }
   });
   const component = props.tag || `h${props.block.type.split('_')[1]}`
 </script>
@@ -21,10 +25,12 @@ import { PropType } from 'vue';
 <template>
   <div>
     <blocks-components-editor
+      v-model="block.properties.content"
       :tag="component"
       :readonly="readonly"
-      v-model="block.properties.content"
+      :undo-manager="undoManager"
       singleline
+      overwrite-caret-position
     />
   </div>
 </template>

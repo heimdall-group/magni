@@ -10,6 +10,10 @@ import { computed } from 'vue';
       type: Boolean,
       default: false,
     },
+    undoManager: {
+      type: Object,
+      required: true,
+    }
   });
   const emits= defineEmits([
     'update:modelValue',
@@ -29,6 +33,8 @@ import { computed } from 'vue';
     <blocks-components-editor
       v-model="content"
       :readonly="readonly"
+      :undo-manager="undoManager"
+      overwrite-caret-position
     />
   </div>
 </template>

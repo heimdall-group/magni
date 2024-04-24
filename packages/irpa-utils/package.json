@@ -1,5 +1,5 @@
 {
-  "name": "irpa-undo-manager",
+  "name": "irpa-utils",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,7 +14,8 @@
   },
   "devDependencies": {
     "typescript": "^5.2.2",
-    "vite": "^5.1.6"
+    "vite": "^5.1.6",
+    "irpa-types": "*"
   },
   "dependencies": {
     "vitest": "^1.4.0"

@@ -101,7 +101,9 @@
     <v-col cols="12" class="d-flex">
       <v-col cols="6">
         New editor
-        <blocks-editor v-model:page="newpage" />
+        <client-only>
+          <blocks-editor v-model:page="newpage" />
+        </client-only>
       </v-col>
       <v-col cols="6">
         <pre>
@@ -139,7 +141,6 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,200;6..12,300;6..12,400;6..12,500;6..12,600;6..12,700;6..12,800;6..12,900;6..12,1000&display=swap');
 @import url(~/assets/css/fonts.css);
-@import url(~/assets/css/blocks.css);
 
 
 * {

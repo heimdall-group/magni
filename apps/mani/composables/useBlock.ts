@@ -63,7 +63,7 @@ export const updateBlock = (blocks: Ref<Array<Block>>, { id, pageId, path, block
  * Checks if user has hightlighted content on page
  * @returns {Number}
  */
-export const highlightedBlock = () => {
+export const blockIsTextHighlighted = () => {
   return window.getSelection()?.toString().length
 }
 
@@ -470,7 +470,7 @@ export const blockInsertBlocks = (blocks: Block | Block[], parent: Block, index:
   parent.content.splice(index, 0, ...blocks)
 }
 
-export const blockRemoveBlocks = (blocks: Block | Block[], parent: Block, index: number) => {
+export const blockRemoveBlock = (blocks: Block | Block[], parent: Block, index: number) => {
   if (!Array.isArray(blocks)) {
     blocks = [blocks]
   }

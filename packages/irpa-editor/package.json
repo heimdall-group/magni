@@ -9,10 +9,13 @@
     "preview": "vite preview"
   },
   "exports": {
-    ".": "./src/editor.vue"
+    "./plugins": "./src/plugins/index.ts",
+    "./components": "./src/components/index.ts"
   },
   "dependencies": {
-    "vue": "^3.4.21"
+    "vue": "^3.4.21",
+    "irpa-undo-manager": "*",
+    "irpa-utils": "*"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",
